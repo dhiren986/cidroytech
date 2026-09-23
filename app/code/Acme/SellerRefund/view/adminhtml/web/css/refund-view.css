@@ -1,0 +1,109 @@
+.acme-refund-detail {
+    max-width: 1040px;
+}
+
+.acme-refund-detail section {
+    background: #fff;
+    border: 1px solid #e3e3e3;
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+}
+
+.acme-refund-detail h2 {
+    margin: 0 0 4px;
+    font-size: 24px;
+    color: #1c3f66;
+}
+
+.acme-refund-detail h3 {
+    margin: 24px 0 10px;
+    font-size: 15px;
+    color: #1c3f66;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 6px;
+}
+
+.acme-refund-detail h3:first-child {
+    margin-top: 0;
+}
+
+.acme-refund-detail .data.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.acme-refund-detail .data.table th,
+.acme-refund-detail .data.table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f1f1f1;
+    text-align: left;
+    font-size: 13px;
+}
+
+.acme-refund-summary .data.table th {
+    width: 220px;
+    color: #6b6b6b;
+    font-weight: 600;
+}
+
+.acme-refund-figures thead th,
+.acme-refund-audit thead th {
+    background: #f8f9fb;
+    color: #6b6b6b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: .03em;
+}
+
+.acme-refund-figures tfoot th,
+.acme-refund-figures tfoot td {
+    font-weight: 700;
+    border-top: 2px solid #1c3f66;
+    border-bottom: none;
+}
+
+.acme-status-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    background: #eef1f5;
+    color: #45566b;
+}
+
+.acme-status-pill.is-good {
+    background: #e6f4ea;
+    color: #1e7d34;
+}
+
+.acme-status-pill.is-pending {
+    background: #fff4e0;
+    color: #9a6400;
+}
+
+.acme-status-pill.is-bad {
+    background: #fdecea;
+    color: #c0392b;
+}
+
+.acme-refund-actions {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.acme-refund-audit pre {
+    max-width: 320px;
+    max-height: 160px;
+    overflow: auto;
+    font-size: 11px;
+    background: #f8f9fb;
+    padding: 6px;
+    border-radius: 3px;
+}

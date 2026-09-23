@@ -10,12 +10,12 @@ $canSeeRaw = $block->canSeeRawPayload();
         <h2><?= $block->escapeHtml($refund->getRefundNo()) ?></h2>
         <table class="data table">
             <tbody>
-                <tr><th><?= $block->escapeHtml(__('Status')) ?></th><td><?= $block->escapeHtml($refund->getStatus()) ?></td></tr>
+                <tr><th><?= $block->escapeHtml(__('Status')) ?></th><td><span class="acme-status-pill <?= $block->escapeHtmlAttr($block->statusPillClass($refund->getStatus())) ?>"><?= $block->escapeHtml($refund->getStatus()) ?></span></td></tr>
                 <tr><th><?= $block->escapeHtml(__('Refund Type')) ?></th><td><?= $block->escapeHtml($refund->getRefundType()) ?></td></tr>
-                <tr><th><?= $block->escapeHtml(__('Create Status')) ?></th><td><?= $block->escapeHtml($refund->getCreateStatus()) ?></td></tr>
-                <tr><th><?= $block->escapeHtml(__('Cash Refund Status')) ?></th><td><?= $block->escapeHtml($refund->getCashRefundStatus()) ?></td></tr>
-                <tr><th><?= $block->escapeHtml(__('Status Check')) ?></th><td><?= $block->escapeHtml($refund->getStatusCheckStatus()) ?></td></tr>
-                <tr><th><?= $block->escapeHtml(__('Confirm Status')) ?></th><td><?= $block->escapeHtml($refund->getConfirmStatus()) ?></td></tr>
+                <tr><th><?= $block->escapeHtml(__('Create Status')) ?></th><td><span class="acme-status-pill <?= $block->escapeHtmlAttr($block->statusPillClass($refund->getCreateStatus())) ?>"><?= $block->escapeHtml($refund->getCreateStatus()) ?></span></td></tr>
+                <tr><th><?= $block->escapeHtml(__('Cash Refund Status')) ?></th><td><span class="acme-status-pill <?= $block->escapeHtmlAttr($block->statusPillClass($refund->getCashRefundStatus())) ?>"><?= $block->escapeHtml($refund->getCashRefundStatus()) ?></span></td></tr>
+                <tr><th><?= $block->escapeHtml(__('Status Check')) ?></th><td><span class="acme-status-pill <?= $block->escapeHtmlAttr($block->statusPillClass($refund->getStatusCheckStatus())) ?>"><?= $block->escapeHtml($refund->getStatusCheckStatus()) ?></span></td></tr>
+                <tr><th><?= $block->escapeHtml(__('Confirm Status')) ?></th><td><span class="acme-status-pill <?= $block->escapeHtmlAttr($block->statusPillClass($refund->getConfirmStatus())) ?>"><?= $block->escapeHtml($refund->getConfirmStatus()) ?></span></td></tr>
                 <tr><th><?= $block->escapeHtml(__('ERP Refund Id')) ?></th><td><?= $block->escapeHtml($refund->getErpRefundId()) ?></td></tr>
             </tbody>
         </table>
@@ -90,7 +90,7 @@ $canSeeRaw = $block->canSeeRawPayload();
                 <tr>
                     <td><?= $block->escapeHtml($event->getCreatedAt()) ?></td>
                     <td><?= $block->escapeHtml($event->getEventType()) ?></td>
-                    <td><?= $block->escapeHtml($event->getEventStatus()) ?></td>
+                    <td><span class="acme-status-pill <?= $block->escapeHtmlAttr($block->statusPillClass($event->getEventStatus())) ?>"><?= $block->escapeHtml($event->getEventStatus()) ?></span></td>
                     <td><?= $block->escapeHtml($event->getStatusFrom()) ?></td>
                     <td><?= $block->escapeHtml($event->getStatusTo()) ?></td>
                     <td><?= $block->escapeHtml($event->getApiCode()) ?></td>

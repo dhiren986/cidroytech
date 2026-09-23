@@ -84,4 +84,20 @@ class View extends Template
 
         return $currency . ' ' . number_format((float) $amount, 0, '.', ',');
     }
+
+    /**
+     * CSS modifier for a status/sub-status pill: is-good, is-bad, or is-pending.
+     */
+    public function statusPillClass(?string $value): string
+    {
+        return match ($value) {
+            RefundInterface::STATUS_ERP_CONFIRMED,
+            RefundInterface::SUB_SUCCEEDED => 'is-good',
+            RefundInterface::STATUS_FAILED,
+            RefundInterface::STATUS_CANCELLED,
+            RefundInterface::SUB_BUSINESS_REJECTED,
+            RefundInterface::SUB_RETRYABLE_ERROR => 'is-bad',
+            default => 'is-pending',
+        };
+    }
 }

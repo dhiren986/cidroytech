@@ -63,7 +63,15 @@ class RefundValidator
 
             if (bccomp($qty, $remaining, 4) === 1) {
                 throw new ValidationException(
-                    __('The refund quantity for order item %1 exceeds the remaining refundable quantity.', $orderItemId)
+                    __(
+                        'The refund quantity %1 for order item %2 exceeds the remaining refundable quantity %3 '
+                        . '(ordered %4, already refunded %5).',
+                        $qty,
+                        $orderItemId,
+                        $remaining,
+                        $qtyOrdered,
+                        $prior
+                    )
                 );
             }
         }

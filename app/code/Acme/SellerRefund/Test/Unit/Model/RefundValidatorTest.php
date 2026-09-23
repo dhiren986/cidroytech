@@ -63,6 +63,25 @@ class RefundValidatorTest extends TestCase
         $this->validator->validate($this->order, $submission, [5 => '0']);
     }
 
+    /**
+     * BR-03: the guard is against the *remaining* refundable quantity, not the raw ordered
+     * quantity. 3 ordered, 2 already refunded by a prior refund - remaining is 1 - so a
+     * request for 2 must be rejected even though 2 is well within the ordered quantity of 3.
+     * This is the exact case a naive "qty <= qty_ordered" check (dropping the prior-refunded
+     * term) would wrongly accept.
+     */
+    public function testQuantityWithinOrderedButExceedingRemainingIsRejected(): void
+    {
+        $this->sellerLineResolver->method('sellerLines')->willReturn([
+            5 => $this->orderItem('3'),
+        ]);
+
+        $submission = new RefundSubmission('defect', [5 => '2']);
+
+        $this->expectException(ValidationException::class);
+        $this->validator->validate($this->order, $submission, [5 => '2']);
+    }
+
     public function testZeroQuantityIsRejected(): void
     {
         $this->sellerLineResolver->method('sellerLines')->willReturn([

@@ -118,6 +118,23 @@ the two branches described in
 [`submission/`](submission/) (starter files are in
 [`docs/candidate/submission-template/`](docs/candidate/submission-template/)).
 
+## Part 3 implementation
+
+The Part 3 fix and its tests are commit `d339967` - "Close BR-03
+test-coverage gap on the refund quantity guard (Part 3)" (`git show d339967`
+once pushed to your fork). See
+[`submission/04-build-impact-note.md`](submission/04-build-impact-note.md) for
+why this was a test-coverage fix rather than a production-logic change.
+
+Run the new tests:
+
+```bash
+bin/assignment-test unit --filter RefundValidatorTest
+bin/assignment-test integration --filter RefundQuantityGuardTest
+```
+
+Or the full bounded suite: `bin/assignment-test all`.
+
 ## Runtime details and troubleshooting
 
 See [`docs/build-notes/`](docs/build-notes/): component versions and image

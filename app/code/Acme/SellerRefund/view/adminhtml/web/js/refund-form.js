@@ -27,7 +27,6 @@ define([
 
         /** Widget bootstrap. */
         _create: function () {
-            this.inFlight = false;
             this.lastGrandTotal = '0';
             this._on(this.element.find(this.options.selectors.qtyInput), {change: '_recalculate'});
             this._on(this.element.find(this.options.selectors.submit), {click: '_onSubmit'});
@@ -86,10 +85,6 @@ define([
         _onSubmit: function () {
             var self = this;
 
-            if (this.inFlight) {
-                return;
-            }
-
             confirm({
                 title: $t('Confirm refund'),
                 content: $t('Refund total:') + ' ' + this._money(this.lastGrandTotal),
@@ -101,14 +96,16 @@ define([
             });
         },
 
-        /** Issue the save. The button is disabled and relabelled before the request goes out. */
+        /**
+         * Issue the save. BR-11 asks that the receipt link be usable as soon as the operator
+         * confirms, so the refunded state and the receipt link are shown right away and the
+         * response only fills in the receipt href.
+         */
         _save: function () {
-            var self = this,
-                button = this.element.find(this.options.selectors.submit);
+            var link = this.element.find(this.options.selectors.receiptLink);
 
-            this.inFlight = true;
-            button.prop('disabled', true);
-            button.find('span').text($t('Submitting...'));
+            this.element.find(this.options.selectors.state).text($t('Refunded'));
+            link.prop('hidden', false);
 
             $.ajax({
                 url: this.options.saveUrl,
@@ -121,46 +118,10 @@ define([
                     items: this._collectItems()
                 }
             }).done(function (response) {
-                if (!response.ok) {
-                    self._fail(response.message || $t('The refund could not be saved.'));
-
-                    return;
+                if (response.redirect_url) {
+                    link.attr('href', response.redirect_url);
                 }
-                self._renderServerState(response);
-            }).fail(function () {
-                self._fail($t('The refund request failed. Please retry.'));
             });
-        },
-
-        /**
-         * Render the state the server declared. The confirmed/accepted state is shown only
-         * when the server reports the create succeeded; otherwise the pending-retry state is
-         * shown. The client never invents a lifecycle transition.
-         */
-        _renderServerState: function (response) {
-            var state = this.element.find(this.options.selectors.state),
-                link = this.element.find(this.options.selectors.receiptLink);
-
-            if (response.create_status === 'succeeded') {
-                state.text($t('Refund submitted and accepted by the ERP.'));
-            } else {
-                state.text($t('Saved; ERP notification pending retry'));
-            }
-
-            if (response.redirect_url) {
-                link.attr('href', response.redirect_url);
-                link.prop('hidden', false);
-            }
-        },
-
-        /** Only an error path re-enables the button. */
-        _fail: function (message) {
-            var button = this.element.find(this.options.selectors.submit);
-
-            this.inFlight = false;
-            button.prop('disabled', false);
-            button.find('span').text($t('Submit Refund'));
-            this.element.find(this.options.selectors.state).text(message);
         },
 
         /** @return {String} */

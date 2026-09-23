@@ -5,22 +5,26 @@ declare(strict_types=1);
 namespace Acme\SellerRefund\Model\Pdf;
 
 use Acme\SellerRefund\Api\Data\RefundInterface;
+use Acme\SellerRefund\Api\Data\RefundItemInterface;
 use Acme\SellerRefund\Api\RefundRepositoryInterface;
-use Acme\SellerRefund\Model\Total\RefundTotalCalculator;
+use Acme\SellerRefund\Model\ResourceModel\Refund;
 use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
 
 /**
- * Reissued receipt / qualified tax invoice for a refund. Every figure is taken from the
- * stored refund snapshot through the calculator, so the receipt agrees with the other
- * presentation surfaces and the downstream export. Labels are ASCII only.
+ * Reissued receipt / qualified tax invoice for a refund. The header restates the original
+ * order figures and the per-rate tax groups the qualified invoice requires, and the body
+ * lists the refunded lines. Labels are ASCII only.
  */
 class RefundReceipt
 {
+    private const SCALE = 4;
+    private const ZERO = '0.0000';
+
     public function __construct(
         private readonly RefundRepositoryInterface $refundRepository,
         private readonly OrderRepositoryInterface $orderRepository,
-        private readonly RefundTotalCalculator $calculator,
+        private readonly Refund $refundResource,
         private readonly TimezoneInterface $timezone
     ) {
     }
@@ -34,29 +38,97 @@ class RefundReceipt
     {
         $items = $this->refundRepository->getItems((int) $refund->getEntityId());
         $order = $this->orderRepository->get($refund->getOrderId());
-        $figures = $this->calculator->fromSnapshot($refund, $items, $order);
+
+        $currency = $this->currency($order);
+        $shipping = $this->num($order->getShippingAmount());
+
+        // Header figures: the original order as first invoiced, summed straight off the order
+        // lines with the per-rate tax groups the qualified invoice needs.
+        $preSubtotal = self::ZERO;
+        $preTax = self::ZERO;
+        $groups = [];
+        foreach ($order->getAllVisibleItems() as $orderItem) {
+            $row = $this->num($orderItem->getRowTotal());
+            $tax = $this->num($orderItem->getTaxAmount());
+            $rate = $this->rateFor($row, $tax);
+            $preSubtotal = bcadd($preSubtotal, $row, self::SCALE);
+            $preTax = bcadd($preTax, $tax, self::SCALE);
+
+            if (!isset($groups[$rate])) {
+                $groups[$rate] = ['rate' => $rate, 'taxable' => self::ZERO, 'tax' => self::ZERO];
+            }
+            $groups[$rate]['taxable'] = bcadd($groups[$rate]['taxable'], $row, self::SCALE);
+            $groups[$rate]['tax'] = bcadd($groups[$rate]['tax'], $tax, self::SCALE);
+        }
+        $preGrandTotal = bcadd(bcadd($preSubtotal, $shipping, self::SCALE), $preTax, self::SCALE);
+
+        $refundedBefore = $this->refundResource->loadRefundedQtyByOrder((int) $order->getEntityId());
 
         return [
             'refund_no' => $refund->getRefundNo(),
-            'currency' => $figures->currency,
-            'is_partial' => $figures->isPartial(),
+            'currency' => $currency,
+            'is_partial' => $refund->getRefundType() === RefundInterface::TYPE_PARTIAL,
             'refund_date' => $this->refundDate($refund),
             'pre_refund' => [
-                'subtotal' => $figures->preRefundSubtotal,
-                'shipping' => $figures->preRefundShipping,
-                'tax' => $figures->preRefundTax,
-                'grand_total' => $figures->preRefundGrandTotal,
+                'subtotal' => $preSubtotal,
+                'shipping' => $shipping,
+                'tax' => $preTax,
+                'grand_total' => $preGrandTotal,
             ],
-            'refund' => [
-                'subtotal' => $figures->refundSubtotal,
-                'shipping' => $figures->refundShipping,
-                'tax' => $figures->refundTax,
-                'grand_total' => $figures->refundGrandTotal,
-            ],
+            'refund' => $this->refundSection($items),
+            'tax_groups' => array_values($groups),
             'lines' => array_map(
-                static fn (\Acme\SellerRefund\Model\Total\RefundFigureLine $line): array => $line->toArray(),
-                $figures->lines
+                fn (RefundItemInterface $item): array => $this->lineData($item, $refundedBefore),
+                $items
             ),
+        ];
+    }
+
+    /**
+     * Refund totals summed from the stored refund snapshot.
+     *
+     * @param RefundItemInterface[] $items
+     *
+     * @return array<string, string>
+     */
+    private function refundSection(array $items): array
+    {
+        $subtotal = self::ZERO;
+        $shipping = self::ZERO;
+        $tax = self::ZERO;
+        $grandTotal = self::ZERO;
+        foreach ($items as $item) {
+            $subtotal = bcadd($subtotal, $this->num($item->getRowAmount()), self::SCALE);
+            $shipping = bcadd($shipping, $this->num($item->getShippingAmount()), self::SCALE);
+            $tax = bcadd($tax, $this->num($item->getTaxAmount()), self::SCALE);
+            $grandTotal = bcadd($grandTotal, $this->num($item->getGrandTotal()), self::SCALE);
+        }
+
+        return [
+            'subtotal' => $subtotal,
+            'shipping' => $shipping,
+            'tax' => $tax,
+            'grand_total' => $grandTotal,
+        ];
+    }
+
+    /**
+     * @param array<int, string> $refundedBefore order_item_id => qty already refunded
+     *
+     * @return array<string, string|int>
+     */
+    private function lineData(RefundItemInterface $item, array $refundedBefore): array
+    {
+        return [
+            'order_item_id' => $item->getOrderItemId(),
+            'sku' => $item->getSku(),
+            'product_name' => $item->getProductName(),
+            'qty_refund' => $item->getQtyRefund(),
+            'refunded_before' => $refundedBefore[$item->getOrderItemId()] ?? self::ZERO,
+            'tax_rate' => $item->getTaxRate(),
+            'row_amount' => $item->getRowAmount(),
+            'tax_amount' => $item->getTaxAmount(),
+            'grand_total' => $item->getGrandTotal(),
         ];
     }
 
@@ -144,9 +216,33 @@ class RefundReceipt
         return $this->timezone->date(new \DateTime($createdAt))->format('Y-m-d');
     }
 
+    /**
+     * Derive the applied rate from a line's ex-tax amount and tax so lines can be grouped.
+     */
+    private function rateFor(string $rowAmount, string $taxAmount): string
+    {
+        if (bccomp($rowAmount, self::ZERO, self::SCALE) <= 0) {
+            return self::ZERO;
+        }
+
+        return bcdiv($taxAmount, $rowAmount, self::SCALE);
+    }
+
+    private function currency(\Magento\Sales\Api\Data\OrderInterface $order): string
+    {
+        $code = $order->getOrderCurrencyCode();
+
+        return $code !== null && $code !== '' ? (string) $code : 'JPY';
+    }
+
     private function money(mixed $amount, string $currency): string
     {
         return $currency . ' ' . number_format((float) $amount, 0, '.', ',');
+    }
+
+    private function num(mixed $value): string
+    {
+        return sprintf('%.4F', (float) $value);
     }
 
     private function ascii(string $value): string

@@ -62,6 +62,32 @@ class Refund extends AbstractDb
         return (bool) $connection->fetchOne($select);
     }
 
+    /**
+     * Quantity already refunded per order item on this order, excluding cancelled and failed
+     * refunds. Used by the receipt to show how much of each line had been refunded before.
+     *
+     * @return array<int, string> order_item_id => summed qty_refund
+     */
+    public function loadRefundedQtyByOrder(int $orderId): array
+    {
+        $connection = $this->getConnection();
+        $select = $connection->select()
+            ->from(
+                ['ri' => $this->getTable('mp_refund_item')],
+                ['ri.order_item_id', 'qty' => new \Zend_Db_Expr('SUM(ri.qty_refund)')]
+            )
+            ->join(
+                ['r' => $this->getMainTable()],
+                'r.entity_id = ri.refund_id',
+                []
+            )
+            ->where('r.order_id = ?', $orderId)
+            ->where('r.status NOT IN (?)', [RefundInterface::STATUS_CANCELLED, RefundInterface::STATUS_FAILED])
+            ->group('ri.order_item_id');
+
+        return $connection->fetchPairs($select);
+    }
+
     protected function _beforeSave(AbstractModel $object): AbstractDb
     {
         if (!$object->isObjectNew()
